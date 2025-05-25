@@ -1,2 +1,5 @@
-data/
-MSc_ 1.ipynb
+/data
+/exports
+/env
+/.ipynb_checkpoints
+requirements.txt
