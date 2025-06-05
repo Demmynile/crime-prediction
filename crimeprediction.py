@@ -1,6 +1,8 @@
 import pickle
 import numpy as np
 from flask import Flask, request, jsonify
+import crimeApis
+
 
 # Initialize the Flask app
 app = Flask(__name__)
@@ -31,6 +33,14 @@ def predict():
     
     # Return the prediction as a JSON response
     return jsonify({'prediction': int(prediction)})
+
+
+
+
+
+
+
+
 
 if __name__ == '__main__':
     app.run(debug=True)
