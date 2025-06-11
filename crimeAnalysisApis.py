@@ -164,6 +164,23 @@ def crime_health():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     
+@app.route('/api/crime_occupation', methods=['GET'])
+def get_crime_occupation():
+    try:
+        query = text("""
+            SELECT "Occupation (former) (11 categories)", COUNT(*) AS total_crimes
+            FROM crime_db
+            GROUP BY "Occupation (former) (11 categories)"
+            ORDER BY total_crimes DESC;
+
+        """)
+        df = pd.read_sql_query(query, engine)
+        return df.to_json(orient='records')
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
+    
+    
 # Run the app
 if __name__ == '__main__':
     app.run(debug=True)
