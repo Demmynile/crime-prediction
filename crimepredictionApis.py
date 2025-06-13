@@ -5,7 +5,9 @@ import pandas as pd
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense
+from tensorflow.keras.layers import Dense , LSTM
+import matplotlib.pyplot as plt
+from sklearn.preprocessing import MinMaxScaler
 
 
 # deeplearning modelling for crime prediction
@@ -62,6 +64,59 @@ print(f"Predicted probability of burglary: {prob:.3f}")
 print("Prediction:", "Burglary" if prob > 0.5 else "Not Burglary")
 
 # time series prediction
+# Filter to only burglary crimes
+df['is_burglary'] = df['Crime type'].str.lower().eq("burglary").astype(int)
+
+# Group by month and count burglaries
+monthly_burglaries = df.groupby(df['Month'].dt.to_period("M"))['is_burglary'].sum().reset_index()
+monthly_burglaries['Month'] = monthly_burglaries['Month'].dt.to_timestamp()
+monthly_burglaries = monthly_burglaries.set_index('Month')
+
+# Normalize the burglary counts
+scaler = MinMaxScaler()
+scaled_series = scaler.fit_transform(monthly_burglaries.values)
+
+# Create time series sequences for LSTM
+def create_sequences(data, window_size=12):
+    X, y = [], []
+    for i in range(len(data) - window_size):
+        X.append(data[i:i+window_size])
+        y.append(data[i+window_size])
+    return np.array(X), np.array(y)
+
+window_size = 12  # Using past 12 months to predict next month
+X, y = create_sequences(scaled_series, window_size)
+
+# Train/test split
+split_idx = int(len(X) * 0.8)
+X_train, X_test = X[:split_idx], X[split_idx:]
+y_train, y_test = y[:split_idx], y[split_idx:]
+
+# Build LSTM model
+model = Sequential([
+    LSTM(64, activation='relu', input_shape=(X.shape[1], 1)),
+    Dense(32, activation='relu'),
+    Dense(1)
+])
+
+model.compile(optimizer='adam', loss='mse')
+model.fit(X_train, y_train, epochs=30, batch_size=8, validation_split=0.1)
+
+# Predict
+preds = model.predict(X_test)
+preds_inv = scaler.inverse_transform(preds)
+y_test_inv = scaler.inverse_transform(y_test)
+
+# Plot actual vs predicted
+plt.figure(figsize=(10, 6))
+plt.plot(y_test_inv, label='Actual')
+plt.plot(preds_inv, label='Predicted')
+plt.title("Burglary Count Forecast")
+plt.xlabel("Months (test set)")
+plt.ylabel("Number of Burglaries")
+plt.legend()
+plt.grid(True)
+plt.show()
 
 # # Initialize the Flask app
 # app = Flask(__name__)
